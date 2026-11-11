@@ -1,0 +1,441 @@
+# P1-DM-B04-001 — B04 Assembly Layer
+## Build Sub-Anchor and Implementation Control Specification
+
+**Project:** Stanley's Raft — Dynamic Memory  
+**Parent:** P1-DM-B03-001 — B03 Persistence Foundation  
+**Anchor ID:** P1-DM-B04-001  
+**Version:** 1.0.0  
+**Status:** RATIFIED  
+**Ratification Authority:** Architect — Sole Ratification Authority  
+**Prepared by:** Stanley  
+**Ratification Date:** 2026-11-10  
+**Classification:** Governing Technical Sub-Anchor / Build Control
+
+---
+
+## 1. Ratification Declaration
+
+The Architect hereby ratifies **P1-DM-B04-001 v1.0.0** as the governing technical sub-anchor for B04 Assembly Layer implementation.
+
+This specification establishes the authorized scope, architecture, boundaries, implementation sequence, acceptance criteria, and change-control requirements for B04.
+
+**B04 implementation is authorized to proceed through its defined gates.**
+
+This ratification does not authorize changes to B03, implementation of excluded features, or commencement of B05.
+
+## 2. Purpose
+
+B04 establishes the application assembly layer above the completed B03 persistence foundation.
+
+Its purpose is to connect validated application requests, model-assisted extraction, trusted provenance, persistent memory operations, retrieval, and context assembly into a controlled and testable workflow.
+
+**Primary objective:** Build a minimal, modular, testable assembly layer that consumes B03 through its existing public interfaces.
+
+## 3. Governing principles
+
+1. **B03 preservation:** B03 is closed. Its schema, persistence behavior, contracts, and ratified decisions must not be modified under B04.
+2. **Append, don't overwrite:** Existing memory versioning and persistence guarantees remain authoritative.
+3. **Contract-first:** Application boundaries accept and return validated contracts wherever applicable.
+4. **Provenance integrity:** Provenance originates from trusted application inputs, never model-generated assertions.
+5. **Model independence:** Model communication is isolated behind a provider-neutral adapter.
+6. **No autonomous authority:** The model may propose extracted knowledge; the application validates it. The model cannot independently verify, promote, or authorize it.
+7. **Evidence before assertion:** Every implementation gate requires reproducible test evidence.
+8. **Minimal dependencies:** Add only dependencies justified by demonstrated requirements.
+9. **Failure transparency:** Failures must be explicit, attributable, and recoverable where appropriate.
+10. **No scope drift:** Features outside this anchor require separate Architect authorization.
+
+## 4. Inherited B03 capabilities
+
+B04 inherits the existing B03 capabilities:
+
+- `MemoryStore`
+- `CaptureRequest`
+- `CaptureResult`
+- `RetrievedMemory`
+- `RelationshipRecord`
+- `ActivityEvent`
+- `ContextItem`
+- `ModelResponseOutcome`
+- `calculate_content_hash()`
+- Existing five-table SQLite schema
+- Existing Pydantic V2 validation rules
+- Existing canonical B03 test suite
+
+B03 canonical test baseline: **71/71 PASS**, as evidenced in the B03 closure record.
+
+B04 must use the existing persistence API rather than introduce a parallel persistence mechanism.
+
+## 5. Authorized B04 components
+
+### B04.1 — Application Entry and Coordination
+
+Provide a controlled application entry point.
+
+Required behavior:
+- Accept an application operation.
+- Validate required inputs.
+- Coordinate relevant services.
+- Return a structured result.
+- Keep orchestration separate from persistence and model communication.
+
+No GUI, web application, user-account system, or deployment infrastructure.
+
+### B04.2 — Model Adapter
+
+Isolate communication with the selected language model.
+
+**Ratified initial provider: Ollama, locally hosted, through its HTTP API.**
+
+The adapter must expose a provider-neutral application interface so that future providers can be introduced without rewriting application services.
+
+Required behavior:
+- Submit prompts and receive model responses.
+- Handle connection errors, timeouts, malformed responses, and unavailable models.
+- Keep provider-specific communication outside application services.
+- Support a mock implementation for deterministic testing.
+
+The adapter must not:
+- Write directly to SQLite.
+- Assign trusted provenance.
+- Bypass contract validation.
+- Change memory verification status.
+- Authorize memory promotion.
+
+Ollama is the initial adapter, not a permanent application dependency.
+
+### B04.3 — Extraction and Contract Validation
+
+Convert model-assisted extraction output into validated application data.
+
+Required behavior:
+- Define expected extraction structure.
+- Parse model output.
+- Reject malformed or incomplete output.
+- Validate classifications against existing contract enums.
+- Preserve uncertainty and epistemic distinctions.
+- Prevent unsupported fields from entering persistence.
+
+**Authority rule:** The model proposes; the application validates.
+
+Syntactically valid output is not necessarily factually correct or verified.
+
+### B04.4 — Capture Service
+
+Coordinate validated extraction results with trusted source information and B03 persistence.
+
+Required sequence:
+1. Receive application capture request.
+2. Establish trusted source metadata from application inputs.
+3. Validate extracted content and classification.
+4. Construct the existing `CaptureRequest`.
+5. Call `MemoryStore.capture()`.
+6. Return `CaptureResult`.
+7. Surface failures without reporting false success.
+
+**Provenance rule:** Source identifiers, locators, timestamps, and source hashes must originate from trusted application inputs. Model output is never authoritative provenance.
+
+No new provenance schema or persistence table is authorized.
+
+### B04.5 — Retrieval Service
+
+Provide a controlled application-facing retrieval boundary over existing B03 capabilities.
+
+Required behavior:
+- Retrieve persisted versions.
+- Preserve atom and version identity.
+- Preserve associated provenance.
+- Validate returned data through existing contracts.
+- Expose supported relationships without inventing new relationship types.
+- Return explicit not-found and retrieval-error results.
+
+No semantic search, vector search, ranking engine, or new retrieval database in B04.
+
+### B04.6 — Context Assembler
+
+Construct model-ready context from retrieved memory records.
+
+Required behavior:
+- Accept validated retrieved memories.
+- Construct valid `ContextItem` objects.
+- Preserve atom IDs and version IDs.
+- Preserve provenance associations.
+- Apply explicit context-size limits.
+- Maintain deterministic ordering where an ordering rule is defined.
+- Report excluded or unavailable context rather than silently misrepresent completeness.
+
+The assembler must not:
+- Modify persisted memories.
+- Rewrite source content.
+- Change epistemic or verification status.
+- Promote inferred content to verified content.
+- Invent provenance or relationships.
+
+## 6. End-to-end B04 workflow
+
+The intended application flow is:
+
+1. Application receives a capture or query operation.
+2. Trusted application inputs are identified.
+3. Model adapter is invoked when extraction or generation is required.
+4. Extraction output is parsed and contract-validated.
+5. Capture service binds trusted provenance.
+6. B03 persists accepted memory through `MemoryStore`.
+7. Retrieval service retrieves required persisted versions.
+8. Context assembler constructs validated context.
+9. Model adapter may consume assembled context for response generation.
+10. Application constructs an explicit `ModelResponseOutcome`.
+11. Application returns the outcome to its caller.
+
+Capture-only and retrieval-only operations must remain independently usable.
+
+**Persistence boundary:** B04 uses B03 persistence. It does not create a second persistence path.
+
+**Response boundary:** `ModelResponseOutcome` remains an application contract. B04 does not add response persistence.
+
+## 7. Data and trust boundaries
+
+| Data | Authority |
+|---|---|
+| Original source content | Trusted application input |
+| Source identity and locator | Trusted application input |
+| Extracted knowledge | Model proposal, subject to validation |
+| Knowledge classification | Validated application contract |
+| Epistemic status | Explicitly assigned and validated |
+| Verification status | Explicit application decision |
+| Provenance association | Application-controlled |
+| Persisted atom/version identity | B03 persistence |
+| Retrieved memory | B03 persistence, validated by contracts |
+| Assembled context | B04 context assembler |
+| Generated response | Model output, represented by response contract |
+
+A model response must never be used as evidence that a memory is factually verified.
+
+## 8. Failure handling requirements
+
+B04 must explicitly handle:
+
+- Model unavailable.
+- Model timeout.
+- Invalid model response.
+- Extraction parsing failure.
+- Contract validation failure.
+- Missing or invalid trusted provenance.
+- Persistence failure.
+- Memory not found.
+- Retrieval failure.
+- Context assembly failure.
+- Response generation failure.
+
+Failure behavior must be deterministic and testable.
+
+Where an operation fails after a previous operation has succeeded, the application must report the partial outcome accurately. It must not imply that the entire workflow succeeded.
+
+Retry behavior must not create duplicate captures or obscure the original failure.
+
+## 9. Authorized module layout
+
+The following is the approved proposed layout:
+
+```text
+src/
+  dynamic_memory/
+    contracts.py                 # Existing B03
+    persistence.py               # Existing B03
+    schema.sql                   # Existing B03
+    application/
+      __init__.py
+      entry.py
+      model_adapter.py
+      extraction.py
+      capture_service.py
+      retrieval_service.py
+      context_assembler.py
+```
+
+Proposed tests:
+
+```text
+tests/
+  test_b04_entry.py
+  test_b04_model_adapter.py
+  test_b04_extraction.py
+  test_b04_capture_service.py
+  test_b04_retrieval_service.py
+  test_b04_context_assembler.py
+  test_b04_integration.py
+```
+
+Final internal interfaces must be documented and tested. The approved layout does not require creating unnecessary modules if a documented implementation reason supports a leaner arrangement.
+
+## 10. Ratified dependency policy
+
+Current observed environment:
+
+- Python virtual environment.
+- Pydantic 2.14.3.
+- No installed `ollama`, `httpx`, or `requests` packages.
+- `requirements.txt` declares only `pydantic==2.14.3`.
+
+**Architect decisions:**
+
+1. Use Ollama as the initial local model provider.
+2. Keep the adapter provider-neutral.
+3. Prefer Python standard-library HTTP facilities.
+4. Add a third-party HTTP or provider client only when evidence demonstrates a technical need.
+5. Pin any approved additional dependency.
+6. Keep tests runnable without a live model service.
+
+No package installation is authorized merely by the existence of this anchor. Dependency changes must occur within the approved implementation gates and be recorded.
+
+## 11. Implementation sequence and gates
+
+### Gate 0 — Anchor ratification
+
+**Status: COMPLETE**
+
+- Sub-anchor reviewed.
+- Architectural decisions approved.
+- Implementation boundary authorized.
+
+Exit evidence: This ratified specification.
+
+### Gate 1 — Interface and boundary design
+
+- Define input/output contracts for each service.
+- Define adapter interface.
+- Define trusted provenance inputs.
+- Define error/result conventions.
+- Confirm dependency approach.
+
+Exit evidence: Interface specification and test plan.
+
+### Gate 2 — Deterministic application foundation
+
+- Implement application entry and service coordination.
+- Implement capture and retrieval service boundaries.
+- Implement context assembly.
+- Use mock model behavior where needed.
+- Validate B03 remains unchanged.
+
+Exit evidence: Component tests and B03 regression results.
+
+### Gate 3 — Model adapter and extraction
+
+- Implement approved Ollama adapter.
+- Implement extraction parsing and validation.
+- Test malformed responses and provider failures.
+- Verify model output cannot assign trusted provenance or authorize verification.
+
+Exit evidence: Adapter and extraction tests, including failure-path tests.
+
+### Gate 4 — Integrated application workflow
+
+- Exercise capture through B03.
+- Retrieve persisted version.
+- Assemble context.
+- Generate a response using the adapter.
+- Construct response outcome.
+- Verify accurate reporting of partial failures.
+
+Exit evidence: Reproducible integration tests and recorded results.
+
+### Gate 5 — B04 closure review
+
+- Review implementation against this anchor.
+- Confirm B03 regression status.
+- Confirm no unauthorized schema or contract changes.
+- Review test evidence and known limitations.
+- Produce B04 completion and handoff record.
+
+Exit evidence: Architect-reviewed B04 closure package and explicit closure decision.
+
+No gate automatically authorizes the next gate. Advancement remains subject to the agreed control process.
+
+## 12. B04 acceptance criteria
+
+B04 is eligible for closure only when:
+
+1. All approved services have implemented interfaces.
+2. Application can perform validated capture through B03.
+3. Application can retrieve persisted memory through B03.
+4. Retrieved identity and provenance are preserved.
+5. Context assembly produces valid `ContextItem` objects.
+6. Model communication is isolated behind the adapter.
+7. Extraction rejects invalid or malformed output.
+8. Trusted provenance cannot be supplied or overwritten by model output.
+9. Failure paths produce explicit outcomes.
+10. Tests demonstrate the approved workflow.
+11. Existing B03 canonical tests remain passing.
+12. No unauthorized B03 changes, schema changes, or persistence features have been introduced.
+13. Implementation evidence is recorded and reviewable.
+
+B04 completion does not imply B05 acceptance.
+
+## 13. Explicit exclusions
+
+The following are outside B04 unless separately authorized:
+
+- New database tables or schema migrations.
+- Modification of B03 contracts or persistence behavior.
+- Vector databases or embedding pipelines.
+- Semantic search and ranking systems.
+- Autonomous memory promotion or verification.
+- Background agents and autonomous scheduling.
+- Multi-user identity and access management.
+- GUI or web front end.
+- Cloud model providers.
+- Distributed deployment.
+- Long-term model conversation history.
+- Model response persistence.
+- Dynamic relationship registries.
+- Changes to protected external Satori `rag.db`.
+
+## 14. B05 handoff boundary
+
+B04 supplies assembly capabilities. B05 is responsible for demonstrating the complete operational roundtrip.
+
+Proposed B05 acceptance sequence:
+
+1. Submit a source-backed capture request.
+2. Validate extracted knowledge.
+3. Persist through B03.
+4. Confirm persistence survives application restart.
+5. Retrieve the persisted version.
+6. Confirm atom/version identity and provenance.
+7. Assemble context.
+8. Submit context to the model.
+9. Receive and validate a response outcome.
+10. Record evidence of the complete sequence.
+
+B05 requirements must be reconciled with its own governing anchor before implementation. This section does not ratify B05 scope.
+
+## 15. Change control
+
+Any proposed change to this anchor must identify:
+
+- The affected requirement.
+- The reason for change.
+- The impact on B03.
+- The impact on B04 acceptance criteria.
+- Additional tests or evidence required.
+
+Scope additions must not be introduced informally during implementation.
+
+The Architect retains sole authority to approve changes and ratify deliverables.
+
+## 16. Ratification record
+
+**Anchor:** P1-DM-B04-001  
+**Version:** 1.0.0  
+**Status:** RATIFIED  
+**Ratification Authority:** Architect  
+**Ratification Date:** 2026-11-10  
+**Implementation Authorization:** GRANTED — within defined gates  
+**B03 Modification Authorization:** NOT GRANTED  
+**B05 Implementation Authorization:** NOT GRANTED
+
+---
+
+**Build motto:** Preserve the foundation. Control the boundary. Assemble the capability. Prove the roundtrip.
+
+**Architect's direction:** The raft is ready to sail.
