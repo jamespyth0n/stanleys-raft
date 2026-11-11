@@ -392,8 +392,8 @@ The Architect supplied the following SHA-256 results during the Gate 4 integrity
 | `src/dynamic_memory/application/entry.py` | `C108DB3F24876E6F42A5229C9DE24E6D80DEB59F169D25028869C166E2E89295` |
 | `src/dynamic_memory/application/__init__.py` | `D03B580DF99B0AE79396B52926D4D59E976871C317F4A2E6CF6DF3C3C780F755` |
 | `tests/test_b04_workflow_integration.py` | `A05CC7D1E428FC92440267D4EE483474A79D322961030C1C9107966985D53090` |
-| `docs/architecture/P1-DM-B04-G4-001.md` | `9BCF44DE1FE98A92E38D26B739C7CDA736CF31892AF4D2AB7F5757C129B15B63` |
-| `docs/architecture/B04_GATE4_INTEGRATION_PLAN_20261110.md` | `570090AC113994042FA9D7E5687D476422371B556AFC029514A968E72E5FCCA2` |
+| `docs/architecture/P1-DM-B04-G4-001_v1.0.0.md` | `9BCF44DE1FE98A92E38D26B739C7CDA736CF31892AF4D2AB7F5757C129B15B63` |
+| `docs/architecture/B04-G4-PLAN-001_v1.0.0.md` | `570090AC113994042FA9D7E5687D476422371B556AFC029514A968E72E5FCCA2` |
 
 These values are recorded as the Architect-reported integrity audit. The protected B03 schema, contracts, and persistence source hashes match the recorded baselines.
 
